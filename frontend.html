@@ -349,17 +349,23 @@ async function checkAuth() {
   }
 
   if (githubToken) {
+    console.log("Token found:", githubToken.slice(0, 8) + "...");
     try {
-      const res = await fetch("https://github-code-reviewer-6adl.onrender.com/post-comment", {
+      const res = await fetch("https://api.github.com/user", {
         headers: { Authorization: `token ${githubToken}` }
       });
+      console.log("GitHub /user response status:", res.status);
       const user = await res.json();
+      console.log("GitHub /user response body:", user);
       githubUsername = user.login;
       document.getElementById("authStatus").innerHTML =
         `Logged in as <strong style="color: var(--paper);">${githubUsername}</strong>. Comments will post using your account.`;
     } catch (e) {
+      console.error("Login check threw an error:", e);
       document.getElementById("authStatus").textContent = "Login check failed. Try logging in again.";
     }
+  } else {
+    console.log("No token found in URL hash or sessionStorage.");
   }
 }
 
