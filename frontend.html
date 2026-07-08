@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reviewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #d3ebfa;      /* sky blue background */
+    --paper: #0f2438;    /* deep navy text */
+    --clay: #d97b3f;     /* warm orange accent — pops against blue */
+    --paper-dim: rgba(15,36,56,0.65);
+    --paper-faint: rgba(15,36,56,0.4);
+    --line: rgba(15,36,56,0.16);
+    --serif: 'Fraunces', serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--clay); color: var(--ink); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 72px 28px 140px;
+  }
+
+  header {
+    max-width: 640px;
+    margin-bottom: 56px;
+  }
+
+  .mark {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--paper-faint);
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mark::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    background: var(--clay);
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(34px, 5vw, 46px);
+    line-height: 1.05;
+    margin: 0 0 18px;
+    letter-spacing: -0.01em;
+  }
+
+  h1 em {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--clay);
+  }
+
+  header p {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: var(--paper-dim);
+    max-width: 460px;
+    margin: 0;
+  }
+
+  .console {
+    max-width: 560px;
+    margin-top: 36px;
+  }
+
+  .input-row {
+    display: flex;
+    border: 1px solid var(--line);
+    background: rgba(15,36,56,0.04);
+  }
+
+  .input-row .glyph {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    color: var(--paper-faint);
+    font-size: 13px;
+    border-right: 1px solid var(--line);
+  }
+
+  #prUrl {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 14px 14px;
+    min-width: 0;
+  }
+
+  #prUrl::placeholder { color: var(--paper-faint); }
+
+  button {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0 20px;
+    background: var(--clay);
+    color: var(--ink);
+    border: 1px solid var(--clay);
+    border-radius: 0;
+    cursor: pointer;
+    transition: background 0.12s ease, transform 0.06s ease;
+  }
+  .post-btn {
+    padding: 8px 16px;
+    font-size: 11px;
+  }
+
+  button:hover:not(:disabled) { background: #c47c48; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+
+  button:disabled {
+    background: transparent;
+    color: var(--paper-faint);
+    border-color: var(--line);
+    cursor: not-allowed;
+  }
+
+  .note {
+    font-size: 11px;
+    color: var(--paper-faint);
+    margin-top: 10px;
+    max-width: 460px;
+  }
+
+  .tracks {
+    display: none;
+    margin-top: 64px;
+    grid-template-columns: 220px 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  .tracks.active { display: grid; }
+
+  @media (max-width: 720px) {
+    .tracks.active { grid-template-columns: 1fr; }
+  }
+
+  .rail-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--paper-faint);
+    margin-bottom: 20px;
+  }
+
+  .timeline { position: relative; padding-left: 18px; }
+
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 4px;
+    bottom: 4px;
+    width: 1px;
+    background: var(--line);
+  }
+
+  .entry {
+    position: relative;
+    padding-bottom: 20px;
+    animation: rise 0.2s ease-out;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(3px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .entry::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    top: 4px;
+    width: 7px;
+    height: 7px;
+    background: var(--paper-faint);
+  }
+
+  .entry.ok::before { background: var(--clay); }
+  .entry.err::before { background: var(--paper); }
+
+  .entry-time {
+    display: block;
+    font-size: 10px;
+    color: var(--paper-faint);
+    margin-bottom: 3px;
+  }
+
+  .entry-text { font-size: 12.5px; color: var(--paper-dim); }
+  .entry.ok .entry-text { color: var(--clay); }
+  .entry.err .entry-text { color: var(--paper); }
+
+  .reports { display: flex; flex-direction: column; gap: 22px; }
+
+  .report {
+    border: 1px solid var(--line);
+    background: rgba(15,36,56,0.03);
+  }
+
+  .report:nth-child(odd) { margin-right: 0; }
+  .report:nth-child(even) { margin-right: 36px; }
+
+  .report-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .report-file {
+    font-size: 12.5px;
+    color: var(--paper-dim);
+  }
+
+  .status {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .status.pass { color: var(--clay); }
+  .status.fail { color: var(--paper); }
+
+  .report-body { padding: 22px 20px 24px; font-family: var(--mono); }
+
+  .report-body h3 {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--paper-faint);
+    margin: 20px 0 9px;
+    font-weight: 500;
+  }
+
+  .report-body h3:first-child { margin-top: 0; }
+
+  .report-body ul { margin: 4px 0; padding-left: 18px; }
+  .report-body li { margin-bottom: 5px; color: var(--paper-dim); font-size: 13px; }
+  .report-body p { color: var(--paper-dim); margin: 4px 0; font-size: 13px; }
+
+  .empty {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--paper-faint);
+    font-size: 12px;
+    max-width: 460px;
+  }
+</style>
+</head>
+<body>
+
+<div class="grid">
+
+  <header>
+    <div class="mark">automated review</div>
+    <h1>Point it at a <em>pull request</em>.</h1>
+    <p>Paste a public GitHub PR link. It lints the change, proposes a fix, runs the test suite, and reports back — the way a careful reviewer would, just faster.</p>
+  </header>
+
+  <div class="console">
+    <div class="input-row">
+      <span class="glyph">→</span>
+      <input id="prUrl" type="text" placeholder="github.com/owner/repo/pull/123" />
+      <button id="submitBtn" onclick="startReview()">Review</button>
+    </div>
+    <div class="note" id="authStatus">
+      Not logged in. <a href="/auth/login" style="color: var(--clay);">Log in with GitHub</a> to post comments on your own PRs.
+    </div>
+  </div>
+
+  <div class="empty" id="emptyState">No review running. Paste a PR link above to start.</div>
+
+  <div class="tracks" id="tracks">
+    <div>
+      <div class="rail-label">Progress</div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+    <div class="reports" id="reports"></div>
+  </div>
+
+</div>
+
+<script>
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
+
+function escapeForAttribute(str) {
+  // Safe to embed inside a single-quoted HTML attribute (e.g. onclick='...')
+  return String(str == null ? "" : str)
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/"/g, "&quot;")
+    .replace(/\n/g, "\\n")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+let githubToken = null;
+let githubUsername = null;
+
+async function checkAuth() {
+  const hash = window.location.hash;
+  if (hash.startsWith("#token=")) {
+    githubToken = hash.replace("#token=", "");
+    history.replaceState(null, "", window.location.pathname);  // clean up the URL
+    sessionStorage.setItem("gh_token", githubToken);
+  } else {
+    githubToken = sessionStorage.getItem("gh_token");
+  }
+
+  if (githubToken) {
+    try {
+      const res = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `token ${githubToken}` }
+      });
+      const user = await res.json();
+      githubUsername = user.login;
+      document.getElementById("authStatus").innerHTML =
+        `Logged in as <strong style="color: var(--paper);">${githubUsername}</strong>. Comments will post using your account.`;
+    } catch (e) {
+      document.getElementById("authStatus").textContent = "Login check failed. Try logging in again.";
+    }
+  }
+}
+
+checkAuth();
+
+function timeNow() {
+  return new Date().toTimeString().slice(0, 8);
+}
+
+function addEntry(text, kind) {
+  document.getElementById("emptyState").style.display = "none";
+  document.getElementById("tracks").classList.add("active");
+
+  const timeline = document.getElementById("timeline");
+  const entry = document.createElement("div");
+  entry.className = "entry" + (kind ? " " + kind : "");
+  entry.innerHTML = `<span class="entry-time">${timeNow()}</span><span class="entry-text">${text}</span>`;
+  timeline.appendChild(entry);
+  entry.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+function formatReport(text) {
+  const lines = String(text || "").split("\n");
+  let html = "";
+  let inList = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${escapeHtml(trimmed.slice(2))}</li>`;
+    } else {
+      if (inList) { html += "</ul>"; inList = false; }
+      if (trimmed.startsWith("### ")) {
+        html += `<h3>${escapeHtml(trimmed.slice(4))}</h3>`;
+      } else if (trimmed.length) {
+        html += `<p>${escapeHtml(trimmed)}</p>`;
+      }
+    }
+  }
+  if (inList) html += "</ul>";
+  return html;
+}
+
+let currentPrContext = null;
+
+function renderReport(data) {
+  const wrap = document.createElement("div");
+  wrap.className = "report";
+  const passed = data.tests_passed;
+
+  const postButtonHtml = githubToken
+    ? `<button class="post-btn" onclick="postComment(this, '${escapeForAttribute(data.report)}')">Post to GitHub</button>`
+    : `<span style="font-size: 11px; color: var(--paper-faint);">Log in to post this comment</span>`;
+
+  wrap.innerHTML = `
+    <div class="report-head">
+      <span class="report-file">${escapeHtml(data.file)}</span>
+      <span class="status ${passed ? 'pass' : 'fail'}">${passed ? 'tests pass' : 'tests failing'}</span>
+    </div>
+    <div class="report-body">
+      <h3>Status</h3>
+      <p>${escapeHtml(data.final_status)} — ${data.iterations} fix iteration${data.iterations === 1 ? '' : 's'}</p>
+      <h3>Report</h3>
+      <div>${formatReport(data.report)}</div>
+      <div style="margin-top: 18px;">${postButtonHtml}</div>
+    </div>
+  `;
+  document.getElementById("reports").appendChild(wrap);
+  wrap.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+
+async function postComment(button, reportText) {
+  if (!currentPrContext) {
+    alert("Missing PR context — try running the review again.");
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Posting…";
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/post-comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        owner: currentPrContext.owner,
+        repo: currentPrContext.repo,
+        pr_number: currentPrContext.pr_number,
+        comment_body: reportText,
+        user_token: githubToken,
+      }),
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      button.textContent = "Posted ✓";
+      button.style.background = "var(--clay)";
+      const link = document.createElement("a");
+      link.href = result.html_url;
+      link.target = "_blank";
+      link.style.marginLeft = "10px";
+      link.style.fontSize = "11px";
+      link.style.color = "var(--paper-faint)";
+      link.textContent = "view comment →";
+      button.after(link);
+    } else {
+      button.textContent = "Failed — see console";
+      console.error("Post comment failed:", result.error);
+      button.disabled = false;
+    }
+  } catch (e) {
+    button.textContent = "Failed — network error";
+    button.disabled = false;
+  }
+}
+
+function startReview() {
+  const raw = document.getElementById("prUrl").value.trim();
+  if (!raw) { document.getElementById("prUrl").focus(); return; }
+  const prUrl = raw.startsWith("http") ? raw : "https://" + raw;
+  const match = prUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/);
+  currentPrContext = match ? { owner: match[1], repo: match[2], pr_number: parseInt(match[3]) } : null;
+
+
+  document.getElementById("timeline").innerHTML = "";
+  document.getElementById("reports").innerHTML = "";
+  document.getElementById("tracks").classList.remove("active");
+  document.getElementById("emptyState").style.display = "block";
+  document.getElementById("emptyState").textContent = "Connecting…";
+  document.getElementById("submitBtn").disabled = true;
+
+  const ws = new WebSocket("ws://127.0.0.1:8000/ws/review");
+
+  ws.onopen = () => ws.send(JSON.stringify({ pr_url: prUrl }));
+
+  ws.onmessage = (msg) => {
+    const { event, data } = JSON.parse(msg.data);
+    switch (event) {
+      case "fetching_pr": addEntry(`fetching ${data.pr_url}`); break;
+      case "pr_fetched": addEntry(`found "${escapeHtml(data.title)}" on ${escapeHtml(data.head_branch)}`); break;
+      case "files_ready": addEntry(`prepared ${data.targets.length} file(s)`); break;
+      case "pipeline_start": addEntry(`reviewing ${escapeHtml(data.file)}`); break;
+      case "reviewer_done": addEntry(`reviewer — pass ${data.iteration + 1}: ${data.issue_count} issue(s)`); break;
+      case "fixer_start": addEntry(`fixer — attempt ${data.attempt}`); break;
+      case "test_done": addEntry(`tests ${data.passed ? "passed" : "failed"}`, data.passed ? "ok" : "err"); break;
+      case "summarizer_start": addEntry(`writing summary`); break;
+      case "pipeline_done":
+        addEntry(`done — ${data.final_status}`, data.tests_passed ? "ok" : "err");
+        renderReport(data);
+        break;
+      case "all_done":
+        addEntry(`all files reviewed`, "ok");
+        document.getElementById("submitBtn").disabled = false;
+        ws.close();
+        break;
+      case "error":
+        addEntry(`error — ${escapeHtml(data.message)}`, "err");
+        document.getElementById("submitBtn").disabled = false;
+        break;
+    }
+  };
+
+  ws.onerror = () => {
+    addEntry("connection error — is the backend running?", "err");
+    document.getElementById("submitBtn").disabled = false;
+  };
+
+  ws.onclose = () => { document.getElementById("submitBtn").disabled = false; };
+}
+
+document.getElementById("prUrl").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") startReview();
+});
+</script>
+
+</body>
+</html>
