@@ -350,7 +350,7 @@ async function checkAuth() {
 
   if (githubToken) {
     try {
-      const res = await fetch("https://api.github.com/user", {
+      const res = await fetch("https://github-code-reviewer-6adl.onrender.com/post-comment", {
         headers: { Authorization: `token ${githubToken}` }
       });
       const user = await res.json();
@@ -491,8 +491,8 @@ function startReview() {
   document.getElementById("emptyState").textContent = "Connecting…";
   document.getElementById("submitBtn").disabled = true;
 
-  const ws = new WebSocket("ws://127.0.0.1:8000/ws/review");
-
+  const ws = new WebSocket("wss://github-code-reviewer-6adl.onrender.com/ws/review");
+  
   ws.onopen = () => ws.send(JSON.stringify({ pr_url: prUrl }));
 
   ws.onmessage = (msg) => {

@@ -25,7 +25,7 @@ from tools.github_fetcher import (
 from pipeline import run_pipeline
 
 app = FastAPI()
-
+BASE_URL = "https://github-code-reviewer-6adl.onrender.com"
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -35,8 +35,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    # Once deployed, add your real domain here too, e.g.:
-    # "https://your-app.onrender.com",
+    "https://github-code-reviewer-6adl.onrender.com",
 ]
 
 app.add_middleware(
@@ -164,7 +163,7 @@ def github_login():
         "https://github.com/login/oauth/authorize"
         f"?client_id={GITHUB_CLIENT_ID}"
         f"&scope=repo"
-        f"&redirect_uri=http://127.0.0.1:8000/auth/callback"
+        f"&redirect_uri={BASE_URL}/auth/callback"
     )
     return RedirectResponse(github_auth_url)
 
@@ -186,9 +185,9 @@ async def github_callback(code: str):
     print("GitHub token exchange:", "success" if token_data.get("access_token") else f"failed — {token_data.get('error', 'unknown error')}")
     access_token = token_data.get("access_token")
     if not access_token:
-        return RedirectResponse("http://127.0.0.1:8000/auth/failed")
+        return RedirectResponse(f"{BASE_URL}/auth/failed")
 
-    frontend_url = f"http://127.0.0.1:8000/#token={access_token}"
+    frontend_url = f"{BASE_URL}/#token={access_token}"
     return RedirectResponse(frontend_url)
 
 
