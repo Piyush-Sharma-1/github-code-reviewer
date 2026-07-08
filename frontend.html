@@ -447,7 +447,7 @@ async function postComment(button, reportText) {
   button.textContent = "Posting…";
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/post-comment", {
+    const res = await fetch("https://github-code-reviewer-6adl.onrender.com/post-comment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
