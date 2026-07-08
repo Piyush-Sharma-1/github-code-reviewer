@@ -4,7 +4,7 @@ from config import GROQ_API_KEY, LLM_MODEL
 llm = ChatGroq(model=LLM_MODEL, api_key=GROQ_API_KEY, temperature=0)
 
 
-def propose_fix(filepath: str, original_code: str, findings: list) -> str:
+def propose_fix(filepath: str, original_code: str, findings: list, test_failure_output: str = None) -> str:
     if not findings:
         return original_code  # nothing to fix
 
@@ -12,6 +12,18 @@ def propose_fix(filepath: str, original_code: str, findings: list) -> str:
         f"{i+1}. Line {f.get('line', '?')}: {f.get('message', '')} ({f.get('symbol', f.get('error', 'unknown'))})"
         for i, f in enumerate(findings)
     )
+
+    prior_failure_section = ""
+    if test_failure_output:
+        prior_failure_section = (
+            "\nIMPORTANT — YOUR PREVIOUS FIX BROKE THE TESTS. Here is the actual test "
+            "failure output from your last attempt:\n\n"
+            + test_failure_output[-1500:] +
+            "\n\nYou MUST analyze this failure carefully. Your previous rewrite introduced "
+            "a bug or changed behavior that the tests depend on. Do not repeat the same "
+            "mistake. Preserve the exact original logic/behavior unless a linter finding "
+            "explicitly requires changing it. When in doubt, make the smallest possible change.\n"
+        )
 
     prompt = f"""You are a precise code-fixing assistant.
 
@@ -22,6 +34,7 @@ ORIGINAL CODE (line numbers shown for reference, do not include them in your out
 
 LINTER ISSUES TO FIX (there are {len(findings)} issues, you must fix ALL of them):
 {findings_text}
+{prior_failure_section}
 
 STRICT RULES:
 1. You MUST fix every single issue listed above. Go through the list one by one before answering.
@@ -38,6 +51,7 @@ STRICT RULES:
 12. Every single line of your output must be valid Python syntax (code, a string, or a comment starting with #).
 13. IMPORTANT: a docstring (triple-quoted string right after a module/function definition) is NOT the same as a # comment. When asked to add a docstring, you MUST use triple quotes \"\"\"like this\"\"\", never a # comment.
 14. Return ONLY the corrected full file content. No markdown fences, no explanation outside the code, no preamble.
+
 Before answering, mentally check: does your output still contain any of the {len(findings)} issues listed, or any new import/variable that wasn't in the original? If yes, fix it now.
 """
 
@@ -82,7 +96,7 @@ if __name__ == "__main__":
         f.write(original)
     print("=== ORIGINAL CODE ===")
     print(original)
-   
+
     findings_before = run_pylint(test_file)
     print(f"=== ISSUES BEFORE FIX: {len(findings_before)} ===")
     for f in findings_before:

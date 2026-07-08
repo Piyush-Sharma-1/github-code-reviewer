@@ -74,6 +74,19 @@ def reviewer_node(state: PipelineState) -> PipelineState:
 def fixer_node(state: PipelineState) -> PipelineState:
     print(f"[Fixer] Proposing fix (attempt {state['iteration_count'] + 1})...")
     _emit("fixer_start", {"attempt": state["iteration_count"] + 1})
+
+    # If a previous attempt already ran and tests failed, feed that failure
+    # output into this attempt so the Fixer knows what it broke last time.
+    prior_test_failure = None
+    if state["iteration_count"] > 0 and state["test_result"].get("passed") is False:
+        prior_test_failure = state["test_result"].get("output")
+
+    fixed_code = propose_fix(
+        state["filepath"],
+        state["current_code"],
+        state["lint_findings"],
+        test_failure_output=prior_test_failure,
+    )
     fixed_code = propose_fix(state["filepath"], state["current_code"], state["lint_findings"])
     with open(state["filepath"], "w", encoding="utf-8") as f:
         f.write(fixed_code)
