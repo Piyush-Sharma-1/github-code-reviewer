@@ -185,7 +185,7 @@ def run_pipeline(filepath: str, test_path: str, progress_callback: Optional[Call
 
     final_state = app.invoke(initial_state)
 
-    if not final_state["lint_findings"]:
+    if final_state["initial_issue_count"] == 0:
         final_state["final_status"] = "No issues found."
     elif final_state["test_result"].get("passed"):
         final_state["final_status"] = "Issues fixed and verified by tests."
