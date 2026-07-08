@@ -58,6 +58,17 @@ def get_file_content(owner: str, repo: str, filepath: str, ref: str) -> str:
 
     return base64.b64decode(data["content"]).decode("utf-8")
 
+def try_get_file_content(owner: str, repo: str, filepath: str, ref: str):
+    """
+    Like get_file_content, but returns None instead of raising if the file
+    doesn't exist (e.g. checking for an optional requirements.txt).
+    """
+    try:
+        return get_file_content(owner, repo, filepath, ref)
+    except requests.exceptions.HTTPError as e:
+        if e.response is not None and e.response.status_code == 404:
+            return None
+        raise
 
 def get_repo_tree(owner: str, repo: str, ref: str):
     """

@@ -35,17 +35,55 @@ def _minimal_env():
     ]
     return {k: v for k, v in os.environ.items() if k in allowed_keys}
 
+def install_dependencies(workdir: str, timeout: int = 90) -> dict:
+    """
+    If a requirements.txt exists in workdir, installs its packages into an
+    isolated folder (workdir/.deps) rather than the system/global environment.
+    Returns a dict describing what happened, never raises.
+    """
+    req_path = os.path.join(workdir, "requirements.txt")
+    if not os.path.exists(req_path):
+        return {"installed": False, "skipped": True, "output": "No requirements.txt found — skipping install."}
 
-def run_tests(test_path: str, timeout: int = 60) -> dict:
+    deps_dir = os.path.join(workdir, ".deps")
+    os.makedirs(deps_dir, exist_ok=True)
+
+    try:
+        result = subprocess.run(
+            [
+                "pip", "install",
+                "-r", req_path,
+                "--target", deps_dir,
+                "--no-input",
+                "--disable-pip-version-check",
+                "--no-color",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return {
+            "installed": result.returncode == 0,
+            "skipped": False,
+            "output": (result.stdout + "\n" + result.stderr)[-2000:],  # keep it bounded
+            "deps_dir": deps_dir,
+        }
+    except subprocess.TimeoutExpired:
+        return {"installed": False, "skipped": False, "output": "Dependency installation timed out.", "deps_dir": None}
+    except FileNotFoundError:
+        return {"installed": False, "skipped": False, "output": "pip not found.", "deps_dir": None}
+
+def run_tests(test_path: str, timeout: int = 60, deps_dir: str = None) -> dict:
     """
     Runs pytest against a given file or directory, sandboxed:
-    - stripped-down environment (no API keys/secrets exposed)
-    - resource limits on CPU/memory/processes (POSIX only)
-    - hard timeout (all platforms)
-    - working directory locked to the test_path itself
-
-    Returns a dict with: passed (bool), output (str), returncode (int)
+    ...
+    If deps_dir is provided (from install_dependencies), it's added to
+    PYTHONPATH so installed third-party packages are importable.
     """
+    env = _minimal_env()
+    if deps_dir:
+        env["PYTHONPATH"] = deps_dir
+
     try:
         result = subprocess.run(
             ["pytest", ".", "-v", "--tb=short"],
@@ -53,7 +91,7 @@ def run_tests(test_path: str, timeout: int = 60) -> dict:
             text=True,
             timeout=timeout,
             cwd=test_path,
-            env=_minimal_env(),
+            env=env,
             preexec_fn=_limit_resources if HAS_RESOURCE else None,
         )
         return {

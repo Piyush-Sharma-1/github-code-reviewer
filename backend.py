@@ -13,6 +13,9 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi import Request
+from tools.test_runner import install_dependencies
+from tools.github_fetcher import try_get_file_content
+
 
 
 from tools.github_fetcher import (
@@ -132,9 +135,18 @@ def review_pr(request: Request, req: ReviewRequest):
         content = get_file_content(pr_data["owner"], pr_data["repo"], repo_path, pr_data["head_branch"])
         write_file(workdir, repo_path, content)
 
+    # Check for and install dependencies, if the repo declares any
+    req_content = try_get_file_content(pr_data["owner"], pr_data["repo"], "requirements.txt", pr_data["head_branch"])
+    deps_dir = None
+    if req_content:
+        write_file(workdir, "requirements.txt", req_content)
+        install_result = install_dependencies(workdir)
+        if install_result.get("installed"):
+            deps_dir = install_result.get("deps_dir")
+
     results = []
     for target_file in local_target_paths:
-        result = run_pipeline(target_file, workdir)
+        result = run_pipeline(target_file, workdir, deps_dir=deps_dir)
         results.append({
             "file": target_file,
             "final_status": result["final_status"],
@@ -269,13 +281,25 @@ async def review_pr_ws(websocket: WebSocket):
             content = get_file_content(pr_data["owner"], pr_data["repo"], repo_path, pr_data["head_branch"])
             write_file(workdir, repo_path, content)
 
+        req_content = try_get_file_content(pr_data["owner"], pr_data["repo"], "requirements.txt", pr_data["head_branch"])
+        deps_dir = None
+        if req_content:
+            write_file(workdir, "requirements.txt", req_content)
+            await websocket.send_json({"event": "installing_deps", "data": {}})
+            install_result = install_dependencies(workdir)
+            if install_result.get("installed"):
+                deps_dir = install_result.get("deps_dir")
+                await websocket.send_json({"event": "deps_installed", "data": {"success": True}})
+            else:
+                await websocket.send_json({"event": "deps_installed", "data": {"success": False, "output": install_result.get("output", "")}})
+
         await websocket.send_json({"event": "files_ready", "data": {"targets": local_target_paths}})
 
         for target_file in local_target_paths:
             await websocket.send_json({"event": "pipeline_start", "data": {"file": target_file}})
 
             result = await loop.run_in_executor(
-                None, lambda: run_pipeline(target_file, workdir, progress_callback=send_event)
+                None, lambda: run_pipeline(target_file, workdir, progress_callback=send_event, deps_dir=deps_dir)
             )
 
             await websocket.send_json({

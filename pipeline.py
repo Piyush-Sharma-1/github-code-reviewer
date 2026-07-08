@@ -21,6 +21,7 @@ def _emit(event: str, data: dict = None):
 class PipelineState(TypedDict):
     filepath: str
     test_path: str
+    deps_dir: Optional[str]
     original_code: str
     current_code: str
     lint_findings: list
@@ -83,7 +84,7 @@ def fixer_node(state: PipelineState) -> PipelineState:
 
 def test_node(state: PipelineState) -> PipelineState:
     print(f"[Test Runner] Running tests at {state['test_path']}...")
-    result = run_tests(state["test_path"])
+    result = run_tests(state["test_path"], deps_dir=state.get("deps_dir"))
     print(f"[Test Runner] Passed: {result['passed']}")
     _emit("test_done", {"passed": result["passed"]})
     state["test_result"] = result
@@ -108,8 +109,7 @@ def route_after_test(state: PipelineState) -> str:
 def summarizer_node(state: PipelineState) -> PipelineState:
     if state["test_result"].get("passed") is None:
         print("[Summarizer] Tests not yet run — running now for final verification...")
-        state["test_result"] = run_tests(state["test_path"])
-
+        state["test_result"] = run_tests(state["test_path"], deps_dir=state.get("deps_dir"))
     print("[Summarizer] Generating PR comment...")
     _emit("summarizer_start", {})
     pr_comment = generate_pr_comment(
@@ -161,7 +161,7 @@ graph.add_edge("summarizer", END)
 app = graph.compile()
 
 
-def run_pipeline(filepath: str, test_path: str, progress_callback: Optional[Callable[[str, dict], None]] = None):
+def run_pipeline(filepath: str, test_path: str, progress_callback: Optional[Callable[[str, dict], None]] = None, deps_dir: str = None):
     global _progress_callback
     _progress_callback = progress_callback
     with open(filepath, "r", encoding="utf-8") as f:
@@ -170,6 +170,7 @@ def run_pipeline(filepath: str, test_path: str, progress_callback: Optional[Call
     initial_state: PipelineState = {
         "filepath": filepath,
         "test_path": test_path,
+        "deps_dir": deps_dir,
         "original_code": original,
         "current_code": original,
         "lint_findings": [],

@@ -506,6 +506,10 @@ function startReview() {
     switch (event) {
       case "fetching_pr": addEntry(`fetching ${data.pr_url}`); break;
       case "pr_fetched": addEntry(`found "${escapeHtml(data.title)}" on ${escapeHtml(data.head_branch)}`); break;
+      case "installing_deps": addEntry(`installing dependencies…`); break;
+      case "deps_installed":
+        addEntry(data.success ? `dependencies installed` : `dependency install failed (continuing anyway)`, data.success ? "ok" : "err");
+        break;
       case "files_ready": addEntry(`prepared ${data.targets.length} file(s)`); break;
       case "pipeline_start": addEntry(`reviewing ${escapeHtml(data.file)}`); break;
       case "reviewer_done": addEntry(`reviewer — pass ${data.iteration + 1}: ${data.issue_count} issue(s)`); break;
